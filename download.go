@@ -9,73 +9,76 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"golang.org/x/image/webp"
 )
 
 func main() {
+	timeStart := time.Now()
+
+	// Read file
 	file, err := readFile("example.txt")
 	if err != nil {
 		panic(err)
 	}
 
+	// Get list of URLs
 	urlList := strings.Split(file, "\n")
 
+	var totalCount, successCount int
+	fmt.Println("Starting...")
+
+	// Download each URL
 	for _, link := range urlList {
+		totalCount++
+
+		// Get file name and original extension decoded
 		path := strings.Split(link, "/")
-		filePath, err := url.QueryUnescape(path[len(path)-1])
+		name, err := url.QueryUnescape(path[len(path)-1])
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			continue
 		}
 
-		err = downloadFile(filePath, link)
+		// Download the file
+		err = downloadFile(name, link)
 		if err != nil {
-			panic(err)
+			fmt.Println("Error downloading: " + link + " err: " + err.Error())
+			continue
 		}
 		fmt.Println("Downloaded: " + link)
 
-		fileName := strings.Split(filePath, ".")
+		// Get raw file name
+		fileName := strings.Split(name, ".")
 
+		// Convert if in webp format
 		if ext := fileName[len(fileName)-1]; ext == "webp" {
 			err = convertWebp(fileName[0], ext)
 			if err != nil {
-				panic(err)
+				fmt.Println("Error converting: " + link + " err: " + err.Error())
+				continue
 			}
 			fmt.Println("Converted: " + link)
 		}
+
+		successCount++
 	}
+
+	str := "file"
+	if successCount > 1 {
+		str = "files"
+	}
+	fmt.Printf("Finish downloading: %d/%d %s in %v\n", successCount, totalCount, str, time.Now().Sub(timeStart))
 }
 
+// readFile will read from a text file to string
 func readFile(file string) (string, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return "", err
 	}
 	return string(data), nil
-}
-
-func convertWebp(fileName, ext string) error {
-	file, err := os.Open(fileName + "." + ext)
-	if err != nil {
-		return err
-	}
-
-	img, err := webp.Decode(file)
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(fileName + ".png")
-	if err != nil {
-		return err
-	}
-
-	err = png.Encode(f, img)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // downloadFile will download a url to a local file. It's efficient because it will
@@ -98,4 +101,33 @@ func downloadFile(name, url string) error {
 	// Write the body to file
 	_, err = io.Copy(out, resp.Body)
 	return err
+}
+
+// convertWebp will convert a webp file into png
+func convertWebp(fileName, ext string) error {
+	// Open the file
+	file, err := os.Open(fileName + "." + ext)
+	if err != nil {
+		return err
+	}
+
+	// Decode webp file
+	img, err := webp.Decode(file)
+	if err != nil {
+		return err
+	}
+
+	// Create new png file
+	f, err := os.Create(fileName + ".png")
+	if err != nil {
+		return err
+	}
+
+	// Encode to png
+	err = png.Encode(f, img)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

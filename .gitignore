@@ -1,0 +1,9 @@
+# Architecture specific extensions/prefixes
+.DS_Store
+
+# Output file extensions
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
