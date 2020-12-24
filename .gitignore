@@ -1,6 +1,9 @@
 # Architecture specific extensions/prefixes
 .DS_Store
 
+# Binary
+/kuro
+
 # Output file extensions
 *.jpg
 *.jpeg
