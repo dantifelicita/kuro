@@ -4,6 +4,10 @@
 # Binary
 /kuro
 
+# App generated file
+log.txt
+output.txt
+
 # Output file extensions
 *.jpg
 *.jpeg

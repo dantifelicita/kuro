@@ -19,6 +19,15 @@ func readFile(file string) (string, error) {
 	return string(data), nil
 }
 
+// writeFile will write from string text into a file
+func writeFile(file string, text string) error {
+	err := ioutil.WriteFile(file, []byte(text), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // downloadFile will download a url to a local file. It's efficient because it will
 // write as it downloads and not load the whole file into memory.
 func downloadFile(name, url string) error {

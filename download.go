@@ -2,55 +2,9 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
-	"os"
-	"regexp"
 	"strings"
-	"time"
 )
-
-var (
-	totalCount, successCount int
-	isPage                   *bool
-	folderPath               = "images"
-	urlRegex                 = regexp.MustCompile(`(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|jpeg|webp|png)`)
-)
-
-func main() {
-	timeStart := time.Now()
-	os.MkdirAll(folderPath, os.ModePerm)
-
-	// Read file
-	file, err := readFile("example.txt")
-	if err != nil {
-		panic(err)
-	}
-
-	// Get list of URLs
-	urlList := strings.Split(file, "\n")
-
-	// Download each URL
-	for idx, link := range urlList {
-		if isRequestPage() {
-			err = readPage(idx, link)
-			if err != nil {
-				logWithTag("P", idx, err.Error())
-			}
-		} else {
-			err = downloadImage(idx, link)
-			if err != nil {
-				logWithTag("I", idx, err.Error())
-			}
-		}
-	}
-
-	str := "image"
-	if successCount > 1 {
-		str = "images"
-	}
-	fmt.Printf("Finished downloading: %d/%d %s in %v\n", successCount, totalCount, str, time.Now().Sub(timeStart))
-}
 
 func downloadImage(idx int, link string) error {
 	if !validateLink(link) {
@@ -88,27 +42,60 @@ func downloadImage(idx int, link string) error {
 	return nil
 }
 
-func readPage(idx int, link string) error {
-	logWithTag("P", idx, "Fetching from page: "+link)
-
+func getImageLinks(link string) ([]string, []string, error) {
 	request := NewRequest()
 	request.URL = link
 	request.Method = "GET"
 
 	response, body, err := request.doRequest()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	defer response.Body.Close()
 
-	imgLinks := urlRegex.FindAllString(string(body), -1)
+	arr1 := urlRegex.FindAllString(string(body), -1)
+	arr2 := rawUrlRegex.FindAllString(string(body), -1)
+
+	return arr1, arr2, nil
+}
+
+func readPage(idx int, link string) error {
+	logWithTag("P", idx, "Fetching from page: "+link)
+
+	imgLinks, rawImgLinks, err := getImageLinks(link)
+	if err != nil {
+		return err
+	}
 
 	for idx, imgLink := range imgLinks {
 		err = downloadImage(idx, imgLink)
 		if err != nil {
-			continue
+			logWithTag("P", idx, "Error downloading: "+imgLink+" "+err.Error())
 		}
 	}
+
+	for idx, imgLink := range rawImgLinks {
+		err = downloadImage(idx, "https://"+imgLink)
+		if err != nil {
+			logWithTag("P", idx, "Error downloading: https://"+imgLink+" "+err.Error())
+		}
+	}
+
+	return nil
+}
+
+func fetchLinks(link string) error {
+	imgLinks, rawImgLinks, err := getImageLinks(link)
+	if err != nil {
+		return err
+	}
+
+	text := strings.Join(imgLinks, "\n")
+
+	text2 := strings.Join(rawImgLinks, "\nhttps://")
+	text2 = "https://" + text2
+
+	outLog.WriteString(text + text2)
 
 	return nil
 }

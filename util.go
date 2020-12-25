@@ -3,36 +3,69 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
+	"regexp"
+	"strconv"
+)
+
+var (
+	urlRegex    = regexp.MustCompile(`(http(s?):)([/|.|\w|\s|%|-])*\.(?:jpg|jpeg|webp|png)`)
+	rawUrlRegex = regexp.MustCompile(`(www)([/|.|\w|\s|-])*\.(?:jpg|jpeg|webp|png)`)
 )
 
 func logWithTag(prefix string, idx int, msg string) {
-	fmt.Printf("[%s%d] %s\n", prefix, idx+1, msg)
+	text := fmt.Sprintf("[%s%d] %s\n", prefix, idx+1, msg)
+	fmt.Print(text)
+	fileLog.WriteString(text)
 }
 
 func validateLink(link string) bool {
-	return strings.HasPrefix(link, "http")
+	return urlRegex.MatchString(link)
 }
 
 func getFilePath(name string) string {
 	return folderPath + "/" + name
 }
 
-func isRequestPage() bool {
-	if isPage != nil {
-		return *isPage
+func getMode() string {
+	if mode != nil {
+		return *mode
 	}
-	p := false
 
+	var m string
 	if len(os.Args) > 1 {
-		if len(os.Args[1]) >= 5 {
-			if os.Args[1][:5] == "-page" {
-				p = true
-			}
-
-		}
+		m = os.Args[1][1:]
 	}
-	isPage = &p
+	mode = &m
 
-	return *isPage
+	return *mode
+}
+
+func getPageQuery() (bool, int, int) {
+	if pageFrom != nil && pageUntil != nil {
+		return *usePageQuery, *pageFrom, *pageUntil
+	}
+
+	var (
+		exist  bool
+		p1, p2 int
+	)
+
+	if len(os.Args) > 2 {
+		p1, _ = strconv.Atoi(os.Args[2])
+		exist = true
+	}
+
+	if len(os.Args) > 3 {
+		p2, _ = strconv.Atoi(os.Args[3])
+	}
+
+	if p2 == 0 {
+		p2 = p1
+	}
+
+	pageFrom = &p1
+	pageUntil = &p2
+	usePageQuery = &exist
+
+	return *usePageQuery, *pageFrom, *pageUntil
 }
