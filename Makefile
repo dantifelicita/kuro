@@ -4,6 +4,7 @@ GOBUILD=$(GOCMD) build
 image: build run-image
 page: build run-page
 link: build run-link
+clean: build run-clean
 
 build:
 	@echo "Building..."
@@ -20,3 +21,7 @@ run-page:
 run-link:
 	@echo "Fetching links..."
 	@./kuro -link
+
+run-clean:
+	@echo "Cleaning..."
+	@./kuro -clean

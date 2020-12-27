@@ -11,8 +11,6 @@ import (
 
 var (
 	mode                     *string
-	pageFrom, pageUntil      *int
-	usePageQuery             *bool
 	totalCount, successCount int
 	logPrefix                string
 	fileLog, outLog          *os.File
@@ -26,6 +24,7 @@ const (
 	modeImage = "image"
 	modePage  = "page"
 	modeLink  = "link"
+	modeClean = "clean"
 )
 
 func main() {
@@ -48,15 +47,14 @@ func main() {
 	// Get list of URLs
 	urlList := strings.Split(file, "\n")
 	reqMode := getMode()
-	isLoop, pf, pu := getPageQuery()
 
 	// Download each URL
 	for idx, link := range urlList {
 		switch reqMode {
 		case modePage:
-			if isLoop {
+			if isLoop, newLink, pf, pu := getPageQuery(link); isLoop {
 				for i := pf; i <= pu; i++ {
-					err = readPage(idx, strings.Replace(link, "{page}", strconv.Itoa(i), -1))
+					err = readPage(idx, strings.Replace(newLink, "{page}", strconv.Itoa(i), -1))
 				}
 			} else {
 				err = readPage(idx, link)
@@ -74,9 +72,9 @@ func main() {
 			}
 			defer outLog.Close()
 
-			if isLoop {
+			if isLoop, newLink, pf, pu := getPageQuery(link); isLoop {
 				for i := pf; i <= pu; i++ {
-					err = fetchLinks(strings.Replace(link, "{page}", strconv.Itoa(i), -1))
+					err = fetchLinks(strings.Replace(newLink, "{page}", strconv.Itoa(i), -1))
 
 				}
 			} else {
@@ -84,6 +82,10 @@ func main() {
 			}
 			logPrefix = "I"
 			act = "fetching links"
+
+		case modeClean:
+			os.RemoveAll(folderPath)
+			act = "deleting"
 
 		default:
 			err = errors.New("Undefined mode")

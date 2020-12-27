@@ -7,24 +7,35 @@ import (
 )
 
 func downloadImage(idx int, link string) error {
-	if !validateLink(link) {
+	arrLink := strings.Split(link, " >> ")
+
+	if !validateLink(arrLink[0]) {
 		return nil
 	}
 	totalCount++
 
-	// Get file name and original extension decoded
-	path := strings.Split(link, "/")
-	name, err := url.QueryUnescape(path[len(path)-1])
+	// Get original file name and extension decoded
+	path := strings.Split(arrLink[0], "/")
+	fullName := path[len(path)-1]
+	arrName := strings.Split(fullName, ".")
+	ext := arrName[len(arrName)-1]
+
+	if len(arrLink) > 1 {
+		// override with custom name
+		fullName = arrLink[1] + "." + ext
+	}
+
+	name, err := url.QueryUnescape(fullName)
 	if err != nil {
 		return err
 	}
 
 	// Download the file
-	err = downloadFile(name, link)
+	err = downloadFile(name, arrLink[0])
 	if err != nil {
-		return errors.New("Error downloading: " + link + " err: " + err.Error())
+		return errors.New("Error downloading: " + arrLink[0] + " err: " + err.Error())
 	}
-	logWithTag("I", idx, "Downloaded: "+link)
+	logWithTag("I", idx, "Downloaded: "+arrLink[0])
 
 	// Get raw file name
 	fileName := strings.Split(name, ".")
@@ -33,9 +44,9 @@ func downloadImage(idx int, link string) error {
 	if ext := fileName[len(fileName)-1]; ext == "webp" {
 		err = convertWebp(fileName[0], ext)
 		if err != nil {
-			return errors.New("Error converting: " + link + " err: " + err.Error())
+			return errors.New("Error converting: " + arrLink[0] + " err: " + err.Error())
 		}
-		logWithTag("I", idx, "Converted: "+link)
+		logWithTag("I", idx, "Converted: "+arrLink[0])
 	}
 
 	successCount++
@@ -90,11 +101,12 @@ func fetchLinks(link string) error {
 		return err
 	}
 
-	text := strings.Join(imgLinks, "\n")
+	var text, text2 string
 
-	text2 := strings.Join(rawImgLinks, "\nhttps://")
-	text2 = "https://" + text2
-
+	text = strings.Join(imgLinks, "\n")
+	if len(rawImgLinks) > 0 {
+		text2 = "\nhttps://" + strings.Join(rawImgLinks, "\nhttps://")
+	}
 	outLog.WriteString(text + text2)
 
 	return nil

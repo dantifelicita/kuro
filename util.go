@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -40,32 +41,28 @@ func getMode() string {
 	return *mode
 }
 
-func getPageQuery() (bool, int, int) {
-	if pageFrom != nil && pageUntil != nil {
-		return *usePageQuery, *pageFrom, *pageUntil
+func getPageQuery(link string) (bool, string, int, int) {
+	arrLink := strings.Split(link, " ")
+	if len(arrLink) < 2 {
+		return false, arrLink[0], 0, 0
 	}
 
 	var (
-		exist  bool
-		p1, p2 int
+		pageStart, pageEnd int
+		err                error
 	)
 
-	if len(os.Args) > 2 {
-		p1, _ = strconv.Atoi(os.Args[2])
-		exist = true
+	pageStart, err = strconv.Atoi(arrLink[1])
+	if err != nil {
+		return false, arrLink[0], 0, 0
 	}
 
-	if len(os.Args) > 3 {
-		p2, _ = strconv.Atoi(os.Args[3])
+	if len(arrLink) > 2 {
+		pageEnd, err = strconv.Atoi(arrLink[2])
+		if err != nil || pageEnd < pageStart {
+			pageEnd = pageStart
+		}
 	}
 
-	if p2 == 0 {
-		p2 = p1
-	}
-
-	pageFrom = &p1
-	pageUntil = &p2
-	usePageQuery = &exist
-
-	return *usePageQuery, *pageFrom, *pageUntil
+	return true, arrLink[0], pageStart, pageEnd
 }
